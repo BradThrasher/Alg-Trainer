@@ -6,6 +6,8 @@ var algArr;//This is the array of alternatives to currentAlgorithm
 var canvas = document.getElementById("cube");
 var ctx = canvas.getContext("2d");
 var stickerSize = canvas.width/5;
+var currentFullAlgset=[];
+var currentSampledAlgset=[];
 var currentAlgIndex = 0;
 var algorithmHistory = [];
 var shouldRecalculateStatistics = true;
@@ -54,6 +56,7 @@ var defaults = {"useVirtual":false,
                 "realScrambles":true,
                 "randAUF":true,
                 "prescramble":true,
+                "randNoRep":false,
                 "goInOrder":false,
                 "goToNextCase":false,
                 "mirrorAllAlgs":false,
@@ -226,6 +229,12 @@ randomizeSMirror.addEventListener("click", function(){
 var randomizeMMirror = document.getElementById("randomizeMMirror");
 randomizeMMirror.addEventListener("click", function(){
     localStorage.setItem("randomizeMMirror", this.checked);
+});
+
+var randNoRep = document.getElementById("randNoRep");
+randNoRep.addEventListener("click", function(){
+    localStorage.setItem("randNoRep", this.checked);
+    currentFullAlgset=[];
 });
 
 var goInOrder = document.getElementById("goInOrder");
@@ -796,13 +805,33 @@ function generateAlgTest(){
     var obfusticateAlg = document.getElementById("realScrambles").checked;
     var shouldPrescramble = document.getElementById("prescramble").checked;
     var randAUF = document.getElementById("randAUF").checked;
-
+    
     var algList = createAlgList()
+   
+    if (currentFullAlgset.length == 0 || JSON.stringify(currentFullAlgset) != JSON.stringify(algList)){
+        
+        currentFullAlgset = algList;
+        currentSampledAlgset = [...this.currentFullAlgset];
+    }
+
+    if (currentSampledAlgset.length == 0){
+        currentSampledAlgset = [...this.currentFullAlgset];
+    }
+
     if (shouldRecalculateStatistics){
         updateAlgsetStatistics(algList);
         shouldRecalculateStatistics = false;
     }
-    var rawAlgStr = randomFromList(algList);
+
+    if (document.getElementById("randNoRep").checked){
+
+        var rawAlgIdx = randomFromList(currentSampledAlgset);
+        var rawAlgStr = currentSampledAlgset[rawAlgIdx];
+        currentSampledAlgset.splice(rawAlgIdx,1);
+        
+    } else {
+        var rawAlgStr = randomFromList(algList);
+    }
     var rawAlgs = rawAlgStr.split("/");
     rawAlgs = fixAlgorithms(rawAlgs);
 
@@ -1065,13 +1094,15 @@ function displayAlgorithmForPreviousTest(reTest=true){//not a great name
 }
 
 function randomFromList(set){
-
-    if (document.getElementById("goInOrder").checked){
-        return set[currentAlgIndex++%set.length];
-    }   
-
+  
     size = set.length;
     rand = Math.floor(Math.random()*size);
+
+    if (document.getElementById("randNoRep").checked){
+        return rand;
+    } else if (document.getElementById("goInOrder").checked) {
+        return set[currentAlgIndex++%set.length];
+    }
 
     return set[rand];
 
